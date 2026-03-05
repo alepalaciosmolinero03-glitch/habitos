@@ -1,0 +1,1347 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hábitos — Tracker + Ahorro (Neón Dark)</title>
+
+  <!-- Tailwind por CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    .glass { backdrop-filter: blur(12px); }
+    .shadow-soft { box-shadow: 0 18px 60px rgba(0,0,0,.40); }
+
+    /* Tabla */
+    .grid-table { display: grid; }
+    .cell { min-height: 46px; }
+    .sticky-first { position: sticky; left: 0; z-index: 20; }
+    .sticky-header { position: sticky; top: 0; z-index: 30; }
+
+    /* Scrollbar (desktop + móvil compatible sin romper) */
+    *::-webkit-scrollbar { height: 10px; width: 10px; }
+    *::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 999px; }
+    *::-webkit-scrollbar-track { background: rgba(255,255,255,.05); }
+
+    /* Checkbox neón (base) */
+    .neo {
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,.12),
+        0 0 22px rgba(34,211,238,.12);
+    }
+    /* Cuando está marcado: DIFUMINADO + COLOR SÓLIDO */
+    .neo-on {
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,.16),
+        0 0 30px rgba(34,211,238,.55),
+        0 0 60px rgba(167,139,250,.20);
+    }
+
+    /* Reduce “sticky” en pantallas pequeñas para evitar cortes raros en móvil */
+    @media (max-width: 640px) {
+      .sticky-first { position: relative; left: auto; }
+      .sticky-header { position: relative; top: auto; }
+    }
+
+    /* Evita que el doble tap haga zoom en botones/inputs pequeños */
+    button, input, select { touch-action: manipulation; }
+  </style>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["ui-sans-serif","system-ui","-apple-system","Segoe UI","Roboto","Helvetica Neue","Arial","Noto Sans"]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="min-h-screen text-slate-100">
+  <!-- Fondo degradado (mismas tonalidades dark) -->
+  <div class="fixed inset-0 -z-10 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900"></div>
+  <!-- Glow sutil -->
+  <div class="fixed inset-0 -z-10 opacity-70">
+    <div class="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-cyan-500/15 blur-3xl"></div>
+    <div class="absolute top-24 -right-24 h-80 w-80 rounded-full bg-violet-500/12 blur-3xl"></div>
+    <div class="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-rose-500/10 blur-3xl"></div>
+  </div>
+
+  <div class="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+
+    <!-- Header -->
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <div class="inline-flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 ring-1 ring-white/10 glass shadow-soft">
+          <span class="inline-flex h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_18px_rgba(34,211,238,.70)]"></span>
+          <p class="text-sm font-medium text-slate-200">Tracker de hábitos + Ahorro</p>
+        </div>
+        <h1 class="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
+          Hábitos por día, semana y mes <span class="text-cyan-300">neón</span>
+        </h1>
+        <p class="mt-1 text-slate-300">
+          Marca lo que cumples. El apartado “Ahorro” calcula el total del periodo.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btnAddHabit"
+          class="inline-flex items-center gap-2 rounded-2xl bg-cyan-500/20 px-4 py-2.5 text-sm font-semibold text-cyan-200 ring-1 ring-cyan-400/30 shadow-soft hover:bg-cyan-500/25">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Añadir
+        </button>
+
+        <button id="btnExport"
+          class="inline-flex items-center gap-2 rounded-2xl bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-100 ring-1 ring-white/10 glass hover:bg-white/10">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          Exportar
+        </button>
+
+        <button id="btnImport"
+          class="inline-flex items-center gap-2 rounded-2xl bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-100 ring-1 ring-white/10 glass hover:bg-white/10">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></svg>
+          Importar
+        </button>
+
+        <button id="btnReset"
+          class="inline-flex items-center gap-2 rounded-2xl bg-rose-500/20 px-4 py-2.5 text-sm font-semibold text-rose-200 ring-1 ring-rose-400/30 shadow-soft hover:bg-rose-500/25">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          Reset
+        </button>
+
+        <input id="fileInput" type="file" accept="application/json" class="hidden" />
+      </div>
+    </header>
+
+    <section class="mt-5 grid gap-4 lg:grid-cols-12">
+      <!-- MAIN -->
+      <div class="lg:col-span-8">
+        <div class="rounded-3xl bg-white/5 p-4 ring-1 ring-white/10 glass shadow-soft">
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+
+            <!-- Tabs (responsive: se rompe en varias líneas sin romper) -->
+            <div class="flex flex-wrap gap-2">
+              <div class="inline-flex rounded-2xl bg-white/5 p-1 ring-1 ring-white/10 w-full sm:w-auto">
+                <button data-tab="tabla" class="tabBtn flex-1 sm:flex-none rounded-xl px-3 py-2 text-sm font-semibold text-slate-100">Tabla</button>
+                <button data-tab="estadisticas" class="tabBtn flex-1 sm:flex-none rounded-xl px-3 py-2 text-sm font-semibold text-slate-300">Estadísticas</button>
+                <button data-tab="ahorro" class="tabBtn flex-1 sm:flex-none rounded-xl px-3 py-2 text-sm font-semibold text-slate-300">Ahorro</button>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
+              <div class="inline-flex rounded-2xl bg-white/5 p-1 ring-1 ring-white/10 w-full sm:w-auto">
+                <button data-view="semana" class="viewBtn flex-1 sm:flex-none rounded-xl px-3 py-2 text-sm font-semibold text-slate-100">Semana</button>
+                <button data-view="mes" class="viewBtn flex-1 sm:flex-none rounded-xl px-3 py-2 text-sm font-semibold text-slate-300">Mes</button>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button id="btnPrev"
+                  class="inline-flex items-center justify-center rounded-2xl bg-white/5 px-3 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10">
+                  ‹
+                </button>
+                <button id="btnToday"
+                  class="inline-flex items-center justify-center rounded-2xl bg-white/5 px-3 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10">
+                  Hoy
+                </button>
+                <button id="btnNext"
+                  class="inline-flex items-center justify-center rounded-2xl bg-white/5 px-3 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10">
+                  ›
+                </button>
+              </div>
+
+              <div class="text-sm font-semibold text-slate-200" id="rangeLabel"></div>
+            </div>
+          </div>
+
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <div class="relative">
+              <div class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+              </div>
+              <input id="searchInput" type="text" placeholder="Buscar hábito…"
+                class="w-full rounded-2xl border border-white/10 bg-white/5 px-10 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-cyan-300/50" />
+            </div>
+
+            <label class="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm">
+              <span class="text-slate-200">Mostrar solo activos</span>
+              <input id="onlyActiveToggle" type="checkbox" class="h-5 w-5 accent-cyan-400" checked />
+            </label>
+          </div>
+        </div>
+
+        <!-- PANELS -->
+        <div class="mt-4 space-y-4">
+          <!-- TABLE -->
+          <div id="panelTabla" class="rounded-3xl bg-white/5 ring-1 ring-white/10 glass shadow-soft overflow-hidden">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 px-4 sm:px-5 py-4">
+              <div>
+                <h2 class="text-base font-semibold">Tabla de hábitos</h2>
+                <p class="text-sm text-slate-300">En móvil, la tabla hace scroll horizontal.</p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button id="btnQuickFill"
+                  class="inline-flex items-center gap-2 rounded-2xl bg-white/5 px-3 sm:px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10">
+                  Marcar hoy
+                </button>
+                <button id="btnQuickClear"
+                  class="inline-flex items-center gap-2 rounded-2xl bg-white/5 px-3 sm:px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10">
+                  Limpiar hoy
+                </button>
+              </div>
+            </div>
+
+            <!-- wrapper: mejora móvil -->
+            <div class="overflow-x-auto overflow-y-hidden">
+              <div id="gridWrap" class="min-w-full"></div>
+            </div>
+          </div>
+
+          <!-- STATS -->
+          <div id="panelStats" class="hidden rounded-3xl bg-white/5 ring-1 ring-white/10 glass shadow-soft overflow-hidden">
+            <div class="border-b border-white/10 px-4 sm:px-5 py-4">
+              <h2 class="text-base font-semibold">Estadísticas</h2>
+              <p class="text-sm text-slate-300">Progreso y rachas del periodo.</p>
+            </div>
+
+            <div class="p-4 sm:p-5 grid gap-4 lg:grid-cols-12">
+              <div class="lg:col-span-5 space-y-3">
+                <div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-sm font-semibold text-slate-100">Cumplimiento total</div>
+                      <div class="text-sm text-slate-300" id="statsSubtitle"></div>
+                    </div>
+                    <div class="text-2xl font-semibold text-cyan-200" id="statsPct">0%</div>
+                  </div>
+                  <div class="mt-3 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                    <div id="statsBar" class="h-full bg-cyan-400 rounded-full shadow-[0_0_18px_rgba(34,211,238,.55)]" style="width:0%"></div>
+                  </div>
+                  <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div class="rounded-2xl bg-white/5 p-3 ring-1 ring-white/10">
+                      <div class="text-slate-300">Checks</div>
+                      <div class="font-semibold" id="statsChecks">0</div>
+                    </div>
+                    <div class="rounded-2xl bg-white/5 p-3 ring-1 ring-white/10">
+                      <div class="text-slate-300">Posibles</div>
+                      <div class="font-semibold" id="statsPossible">0</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+                  <div class="text-sm font-semibold text-slate-100">Top hábitos (periodo)</div>
+                  <div class="mt-3 space-y-2" id="topHabits"></div>
+                </div>
+              </div>
+
+              <div class="lg:col-span-7">
+                <div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+                  <div class="text-sm font-semibold text-slate-100">Detalle por hábito</div>
+                  <div class="mt-4 space-y-3" id="habitCards"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SAVINGS -->
+          <div id="panelSavings" class="hidden rounded-3xl bg-white/5 ring-1 ring-white/10 glass shadow-soft overflow-hidden">
+            <div class="border-b border-white/10 px-4 sm:px-5 py-4">
+              <h2 class="text-base font-semibold">Ahorro / Penalizaciones</h2>
+              <p class="text-sm text-slate-300">Total económico del periodo visible.</p>
+            </div>
+
+            <div class="p-4 sm:p-5 grid gap-4 lg:grid-cols-12">
+              <div class="lg:col-span-5 space-y-3">
+                <div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-sm font-semibold text-slate-100">Total periodo</div>
+                      <div class="text-sm text-slate-300" id="saveSubtitle"></div>
+                    </div>
+                    <div class="text-2xl font-semibold text-amber-200" id="saveTotal">0,00 €</div>
+                  </div>
+                  <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div class="rounded-2xl bg-white/5 p-3 ring-1 ring-white/10">
+                      <div class="text-slate-300">Cumplidos</div>
+                      <div class="font-semibold text-emerald-200" id="saveDone">0,00 €</div>
+                    </div>
+                    <div class="rounded-2xl bg-white/5 p-3 ring-1 ring-white/10">
+                      <div class="text-slate-300">No cumplidos</div>
+                      <div class="font-semibold text-rose-200" id="saveNotDone">0,00 €</div>
+                    </div>
+                  </div>
+
+                  <div class="mt-3 rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10 text-sm text-slate-300">
+                    <div class="font-semibold text-slate-100">Reglas</div>
+                    <ul class="mt-2 list-disc pl-5 space-y-1">
+                      <li><span class="text-slate-100 font-semibold">Grande</span>: cumple 0,80€ · no cumple 1,60€</li>
+                      <li><span class="text-slate-100 font-semibold">Mediano</span>: cumple 0,40€ · no cumple 0,80€</li>
+                      <li><span class="text-slate-100 font-semibold">Pequeño</span>: cumple 0,08€ · no cumple 0,16€</li>
+                      <li><span class="text-slate-100 font-semibold">Pequeño con castigo</span>: si no cumple → 1,00€</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+                  <div class="text-sm font-semibold text-slate-100">Top penalizaciones (periodo)</div>
+                  <div class="mt-3 space-y-2" id="topPenalties"></div>
+                </div>
+              </div>
+
+              <div class="lg:col-span-7">
+                <div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+                  <div class="text-sm font-semibold text-slate-100">Detalle económico por hábito</div>
+                  <div class="mt-4 space-y-3" id="saveHabitCards"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIDEBAR -->
+      <aside class="lg:col-span-4">
+        <div class="rounded-3xl bg-white/5 p-4 ring-1 ring-white/10 glass shadow-soft">
+          <h3 class="text-base font-semibold">Mis hábitos</h3>
+          <p class="text-sm text-slate-300">Edita tamaño, castigo, tipo y color.</p>
+          <div class="mt-4 space-y-2" id="habitList"></div>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <!-- MODAL -->
+  <div id="modal" class="fixed inset-0 hidden items-center justify-center p-4 z-50">
+    <div id="modalBackdrop" class="absolute inset-0 bg-slate-950/75"></div>
+    <div class="relative w-full max-w-xl rounded-3xl bg-slate-950 shadow-soft ring-1 ring-white/10 overflow-hidden">
+      <div class="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <div class="text-base font-semibold" id="modalTitle">Añadir hábito</div>
+        <button id="modalClose" class="rounded-2xl p-2 text-slate-300 hover:bg-white/5 hover:text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="px-5 py-4 space-y-4">
+        <div>
+          <label class="text-sm font-semibold text-slate-200">Nombre</label>
+          <input id="habitName" type="text"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/50" />
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label class="text-sm font-semibold text-slate-200">Tipo (día/semana/mes)</label>
+            <select id="habitSchedule"
+              class="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50">
+              <option value="daily">Diario</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensual</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-slate-200">Color (neón)</label>
+            <select id="habitColor"
+              class="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50">
+              <option value="cyan">Cyan</option>
+              <option value="emerald">Emerald</option>
+              <option value="violet">Violet</option>
+              <option value="rose">Rose</option>
+              <option value="amber">Amber</option>
+              <option value="indigo">Indigo</option>
+              <option value="slate">Slate</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label class="text-sm font-semibold text-slate-200">Tamaño (para ahorro)</label>
+            <select id="habitSize"
+              class="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50">
+              <option value="big">Grande</option>
+              <option value="medium">Mediano</option>
+              <option value="small">Pequeño</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-slate-200">Castigo especial (solo pequeños)</label>
+            <label class="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm">
+              <span class="text-slate-200">1€ si NO cumple</span>
+              <input id="habitPenalty" type="checkbox" class="h-5 w-5 accent-rose-400" />
+            </label>
+          </div>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label class="text-sm font-semibold text-slate-200">Objetivo (si semanal)</label>
+            <input id="targetWeek" type="number" min="0" value="3"
+              class="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50" />
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-slate-200">Objetivo (si mensual)</label>
+            <input id="targetMonth" type="number" min="0" value="8"
+              class="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50" />
+          </div>
+        </div>
+
+        <label class="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm">
+          <span class="text-slate-200">Activo</span>
+          <input id="habitActive" type="checkbox" class="h-5 w-5 accent-cyan-400" checked />
+        </label>
+      </div>
+
+      <div class="flex flex-col gap-2 border-t border-white/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <button id="btnDeleteHabit" class="hidden inline-flex items-center gap-2 rounded-2xl bg-rose-500/20 px-4 py-2.5 text-sm font-semibold text-rose-200 ring-1 ring-rose-400/30 hover:bg-rose-500/25">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>
+          </svg>
+          Borrar
+        </button>
+
+        <div class="flex gap-2 sm:justify-end">
+          <button id="btnCancel" class="inline-flex items-center gap-2 rounded-2xl bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10">
+            Cancelar
+          </button>
+          <button id="btnSaveHabit" class="inline-flex items-center gap-2 rounded-2xl bg-cyan-500/20 px-4 py-2.5 text-sm font-semibold text-cyan-200 ring-1 ring-cyan-400/30 hover:bg-cyan-500/25">
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="fixed bottom-4 left-1/2 hidden -translate-x-1/2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-slate-100 ring-1 ring-white/10 shadow-soft">
+    Guardado
+  </div>
+
+<script>
+(() => {
+  const STORAGE_KEY = "ale-habit-tracker-savings-v3";
+  const ES_DOW = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+
+  const PRICES = {
+    big:    { done: 0.80, not: 1.60 },
+    medium: { done: 0.40, not: 0.80 },
+    small:  { done: 0.08, not: 0.16 },
+  };
+
+  const DEFAULT = {
+    habits: [
+      { id:"h_water", name:"Agua 2L", color:"cyan", schedule:"daily", size:"small", penalty:false, active:true },
+      { id:"h_read", name:"Leer 20 min", color:"violet", schedule:"daily", size:"medium", penalty:false, active:true },
+      { id:"h_walk", name:"Caminar 30 min", color:"emerald", schedule:"daily", size:"medium", penalty:false, active:true },
+      { id:"h_strength", name:"Fuerza", color:"rose", schedule:"weekly", targetPerWeek:3, size:"big", penalty:false, active:true },
+      { id:"h_budget", name:"Revisar gastos", color:"amber", schedule:"weekly", targetPerWeek:1, size:"small", penalty:true, active:true },
+      { id:"h_declutter", name:"Orden 15 min", color:"indigo", schedule:"monthly", targetPerMonth:8, size:"small", penalty:false, active:true },
+    ],
+    checks: {},
+    ui: { tab:"tabla", view:"semana", onlyActive:true, query:"", anchorISO:null }
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const toastEl = $("toast");
+
+  function showToast(msg="Hecho") {
+    toastEl.textContent = msg;
+    toastEl.classList.remove("hidden");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.add("hidden"), 1200);
+  }
+
+  function uid() { return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 8); }
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function startOfDay(d){ const x = new Date(d); x.setHours(0,0,0,0); return x; }
+  function toISODate(d){
+    const x = new Date(d);
+    return `${x.getFullYear()}-${pad2(x.getMonth()+1)}-${pad2(x.getDate())}`;
+  }
+  function addDays(d,n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+  function startOfWeekMonday(d){
+    const x = startOfDay(d);
+    const day = x.getDay();
+    const diff = (day===0 ? -6 : 1) - day;
+    return addDays(x, diff);
+  }
+  function endOfWeekSunday(d){ return addDays(startOfWeekMonday(d), 6); }
+  function getDaysInMonth(d){
+    const x = new Date(d);
+    return new Date(x.getFullYear(), x.getMonth()+1, 0).getDate();
+  }
+  function monthStart(d){
+    const x = new Date(d);
+    x.setDate(1);
+    return startOfDay(x);
+  }
+  function clamp(v,min,max){ return Math.min(max, Math.max(min,v)); }
+
+  function formatRangeES(a,b){
+    const A = new Date(a), B = new Date(b);
+    const opts = { day:"2-digit", month:"short" };
+    return `${A.toLocaleDateString("es-ES", opts)} — ${B.toLocaleDateString("es-ES", opts)}`;
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function colorMeta(color){
+    // Devuelve: dot, pill, solidBg, glowShadow, iconColor
+    // solidBg = color sólido (con alpha suficiente) + mantenemos glow (difuminado) con neo-on.
+    switch(color){
+      case "emerald": return {
+        dot:"bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,.80)]",
+        pill:"bg-emerald-500/10 text-emerald-200 ring-emerald-400/25",
+        solidBg:"bg-emerald-400/35",
+        glow:"shadow-[0_0_26px_rgba(52,211,153,.70)]",
+        icon:"text-emerald-100"
+      };
+      case "violet": return {
+        dot:"bg-violet-400 shadow-[0_0_16px_rgba(167,139,250,.85)]",
+        pill:"bg-violet-500/10 text-violet-200 ring-violet-400/25",
+        solidBg:"bg-violet-400/35",
+        glow:"shadow-[0_0_26px_rgba(167,139,250,.70)]",
+        icon:"text-violet-100"
+      };
+      case "rose": return {
+        dot:"bg-rose-400 shadow-[0_0_16px_rgba(251,113,133,.80)]",
+        pill:"bg-rose-500/10 text-rose-200 ring-rose-400/25",
+        solidBg:"bg-rose-400/35",
+        glow:"shadow-[0_0_26px_rgba(251,113,133,.70)]",
+        icon:"text-rose-100"
+      };
+      case "amber": return {
+        dot:"bg-amber-400 shadow-[0_0_16px_rgba(251,191,36,.75)]",
+        pill:"bg-amber-500/10 text-amber-200 ring-amber-400/25",
+        solidBg:"bg-amber-400/30",
+        glow:"shadow-[0_0_26px_rgba(251,191,36,.60)]",
+        icon:"text-amber-50"
+      };
+      case "indigo": return {
+        dot:"bg-indigo-400 shadow-[0_0_16px_rgba(129,140,248,.75)]",
+        pill:"bg-indigo-500/10 text-indigo-200 ring-indigo-400/25",
+        solidBg:"bg-indigo-400/35",
+        glow:"shadow-[0_0_26px_rgba(129,140,248,.60)]",
+        icon:"text-indigo-50"
+      };
+      case "slate": return {
+        dot:"bg-slate-300 shadow-[0_0_12px_rgba(226,232,240,.35)]",
+        pill:"bg-white/5 text-slate-200 ring-white/10",
+        solidBg:"bg-white/10",
+        glow:"shadow-[0_0_18px_rgba(226,232,240,.18)]",
+        icon:"text-slate-100"
+      };
+      default: return {
+        dot:"bg-cyan-400 shadow-[0_0_16px_rgba(34,211,238,.90)]",
+        pill:"bg-cyan-500/10 text-cyan-200 ring-cyan-400/25",
+        solidBg:"bg-cyan-400/35",
+        glow:"shadow-[0_0_28px_rgba(34,211,238,.75)]",
+        icon:"text-cyan-50"
+      };
+    }
+  }
+
+  function sizeLabel(size){
+    if(size==="big") return "Grande";
+    if(size==="medium") return "Mediano";
+    return "Pequeño";
+  }
+
+  function priceFor(h, done){
+    const size = h.size || "medium";
+    if(size==="small" && h.penalty && !done) return 1.00;
+    const base = PRICES[size] || PRICES.medium;
+    return done ? base.done : base.not;
+  }
+
+  function formatEUR(n){
+    return n.toLocaleString("es-ES", { style:"currency", currency:"EUR", minimumFractionDigits:2, maximumFractionDigits:2 });
+  }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return structuredClone(DEFAULT);
+      const parsed = JSON.parse(raw);
+      const merged = {
+        habits: Array.isArray(parsed.habits) ? parsed.habits : structuredClone(DEFAULT.habits),
+        checks: parsed.checks && typeof parsed.checks==="object" ? parsed.checks : {},
+        ui: { ...DEFAULT.ui, ...(parsed.ui || {}) }
+      };
+      merged.habits = merged.habits.map(h => ({
+        id: h.id || ("h_"+uid()),
+        name: h.name || "",
+        color: h.color || "cyan",
+        schedule: h.schedule || "daily",
+        size: h.size || "medium",
+        penalty: !!h.penalty,
+        targetPerWeek: h.targetPerWeek ?? 3,
+        targetPerMonth: h.targetPerMonth ?? 8,
+        active: h.active !== false
+      }));
+      return merged;
+    } catch {
+      return structuredClone(DEFAULT);
+    }
+  }
+
+  let state = load();
+  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+  let anchorDate = state.ui.anchorISO ? startOfDay(new Date(state.ui.anchorISO)) : startOfDay(new Date());
+  if(isNaN(anchorDate.getTime())) anchorDate = startOfDay(new Date());
+
+  // DOM
+  const rangeLabel = $("rangeLabel");
+  const gridWrap = $("gridWrap");
+  const habitList = $("habitList");
+  const panelTabla = $("panelTabla");
+  const panelStats = $("panelStats");
+  const panelSavings = $("panelSavings");
+  const searchInput = $("searchInput");
+  const onlyActiveToggle = $("onlyActiveToggle");
+
+  // Modal
+  const modal = $("modal");
+  const modalBackdrop = $("modalBackdrop");
+  const modalTitle = $("modalTitle");
+  const habitName = $("habitName");
+  const habitSchedule = $("habitSchedule");
+  const habitColor = $("habitColor");
+  const habitSize = $("habitSize");
+  const habitPenalty = $("habitPenalty");
+  const targetWeek = $("targetWeek");
+  const targetMonth = $("targetMonth");
+  const habitActive = $("habitActive");
+  const btnDeleteHabit = $("btnDeleteHabit");
+  let editingId = null;
+
+  // Stats
+  const statsSubtitle = $("statsSubtitle");
+  const statsPct = $("statsPct");
+  const statsBar = $("statsBar");
+  const statsChecks = $("statsChecks");
+  const statsPossible = $("statsPossible");
+  const topHabits = $("topHabits");
+  const habitCards = $("habitCards");
+
+  // Savings
+  const saveSubtitle = $("saveSubtitle");
+  const saveTotal = $("saveTotal");
+  const saveDone = $("saveDone");
+  const saveNotDone = $("saveNotDone");
+  const topPenalties = $("topPenalties");
+  const saveHabitCards = $("saveHabitCards");
+
+  // Checks
+  function getChecked(dateISO, habitId){
+    return !!(state.checks?.[dateISO]?.[habitId]);
+  }
+  function setChecked(dateISO, habitId, val){
+    const day = state.checks[dateISO] ? { ...state.checks[dateISO] } : {};
+    day[habitId] = !!val;
+    state.checks = { ...state.checks, [dateISO]: day };
+    save();
+  }
+  function toggleChecked(dateISO, habitId){
+    setChecked(dateISO, habitId, !getChecked(dateISO, habitId));
+  }
+
+  function filteredHabits(){
+    const q = (state.ui.query || "").trim().toLowerCase();
+    const onlyActive = !!state.ui.onlyActive;
+    return state.habits
+      .filter(h => onlyActive ? h.active !== false : true)
+      .filter(h => q ? (h.name || "").toLowerCase().includes(q) : true)
+      .sort((a,b) => (a.name||"").localeCompare(b.name||"", "es"));
+  }
+
+  function getPeriod(){
+    const view = state.ui.view;
+    if(view==="mes"){
+      const start = monthStart(anchorDate);
+      const days = getDaysInMonth(anchorDate);
+      const dates = Array.from({length:days}, (_,i)=>addDays(start,i));
+      return { type:"mes", start, end:addDays(start,days-1), dates };
+    }
+    const start = startOfWeekMonday(anchorDate);
+    const end = endOfWeekSunday(anchorDate);
+    const dates = Array.from({length:7}, (_,i)=>addDays(start,i));
+    return { type:"semana", start, end, dates };
+  }
+
+  function renderRangeLabel(){
+    const p = getPeriod();
+    rangeLabel.textContent = (p.type==="mes")
+      ? new Date(p.start).toLocaleDateString("es-ES",{month:"long", year:"numeric"})
+      : formatRangeES(p.start, p.end);
+  }
+
+  function renderHabitList(){
+    const hs = filteredHabits();
+    if(hs.length===0){
+      habitList.innerHTML = `<div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">No hay hábitos con esos filtros.</div>`;
+      return;
+    }
+
+    habitList.innerHTML = hs.map(h => {
+      const c = colorMeta(h.color);
+      const badge = h.schedule === "daily" ? "Diario" : (h.schedule==="weekly" ? "Semanal" : "Mensual");
+      const penaltyTag = (h.size==="small" && h.penalty) ? `<span class="inline-flex items-center rounded-xl px-2 py-1 text-xs font-semibold ring-1 bg-rose-500/10 text-rose-200 ring-rose-400/25">Castigo</span>` : "";
+      return `
+        <div class="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <button class="min-w-0 flex-1 text-left" data-edit="${h.id}">
+            <div class="flex items-center gap-2">
+              <span class="h-2.5 w-2.5 rounded-full ${c.dot}"></span>
+              <span class="truncate text-sm font-semibold text-slate-100">${escapeHtml(h.name||"")}</span>
+            </div>
+            <div class="mt-1 flex flex-wrap items-center gap-2">
+              <span class="inline-flex items-center rounded-xl px-2 py-1 text-xs font-semibold ring-1 ${c.pill}">${badge}</span>
+              <span class="inline-flex items-center rounded-xl px-2 py-1 text-xs font-semibold ring-1 bg-white/5 text-slate-200 ring-white/10">${sizeLabel(h.size)}</span>
+              ${penaltyTag}
+              <span class="text-xs text-slate-400">${h.active===false ? "Inactivo" : "Activo"}</span>
+            </div>
+          </button>
+
+          <label class="inline-flex items-center gap-2 text-sm text-slate-200">
+            <span class="hidden sm:inline">Activo</span>
+            <input type="checkbox" class="h-5 w-5 accent-cyan-400" data-toggle-active="${h.id}" ${h.active===false ? "" : "checked"} />
+          </label>
+        </div>
+      `;
+    }).join("");
+
+    habitList.querySelectorAll("[data-edit]").forEach(btn => {
+      btn.addEventListener("click", () => openModal(btn.getAttribute("data-edit")));
+    });
+    habitList.querySelectorAll("[data-toggle-active]").forEach(chk => {
+      chk.addEventListener("change", () => {
+        const id = chk.getAttribute("data-toggle-active");
+        const h = state.habits.find(x => x.id===id);
+        if(!h) return;
+        h.active = chk.checked;
+        save();
+        renderAll();
+        showToast("Actualizado");
+      });
+    });
+  }
+
+  function renderGrid(){
+    const hs = filteredHabits();
+    const p = getPeriod();
+    renderRangeLabel();
+
+    const minColW = p.type==="mes" ? 52 : 70;
+
+    // Responsive: en móvil reducimos la columna del nombre, y forzamos tabla más compacta
+    const nameColW = (window.innerWidth < 640) ? 240 : 320;
+
+    const headerCells = [];
+    headerCells.push(`
+      <div class="sticky-first sticky-header cell bg-slate-950/85 border-b border-white/10 px-4 flex items-center">
+        <div class="text-sm font-semibold text-slate-200">Hábito</div>
+      </div>
+    `);
+
+    p.dates.forEach((d, idx) => {
+      const dayNum = String(d.getDate()).padStart(2,"0");
+      const label = p.type==="mes" ? dayNum : ES_DOW[idx] + " " + dayNum;
+      headerCells.push(`
+        <div class="sticky-header cell bg-slate-950/85 border-b border-white/10 flex items-center justify-center px-2">
+          <div class="text-xs font-semibold text-slate-200 text-center">${label}</div>
+        </div>
+      `);
+    });
+
+    if(hs.length === 0){
+      gridWrap.innerHTML = `<div class="p-6 text-sm text-slate-300">No hay hábitos que mostrar.</div>`;
+      return;
+    }
+
+    const rows = [];
+    hs.forEach((h) => {
+      const c = colorMeta(h.color);
+      const badge = h.schedule === "daily" ? "Diario" : (h.schedule==="weekly" ? "Semanal" : "Mensual");
+      const penaltyTag = (h.size==="small" && h.penalty) ? `<span class="ml-2 inline-flex items-center rounded-xl px-2 py-1 text-[11px] font-semibold ring-1 bg-rose-500/10 text-rose-200 ring-rose-400/25">Castigo</span>` : "";
+
+      rows.push(`
+        <div class="sticky-first cell bg-slate-950/55 border-b border-white/10 px-4 flex items-center">
+          <button class="w-full text-left" data-edit="${h.id}">
+            <div class="flex items-center gap-2">
+              <span class="h-2.5 w-2.5 rounded-full ${c.dot}"></span>
+              <span class="text-sm font-semibold text-slate-100 truncate">${escapeHtml(h.name||"")}</span>
+            </div>
+            <div class="mt-1 flex flex-wrap items-center gap-2">
+              <span class="inline-flex items-center rounded-xl px-2 py-1 text-xs font-semibold ring-1 ${c.pill}">${badge}</span>
+              <span class="inline-flex items-center rounded-xl px-2 py-1 text-xs font-semibold ring-1 bg-white/5 text-slate-200 ring-white/10">${sizeLabel(h.size)}</span>
+              ${penaltyTag}
+              ${h.active===false ? `<span class="text-xs text-slate-400">Inactivo</span>` : ``}
+            </div>
+          </button>
+        </div>
+      `);
+
+      p.dates.forEach((d) => {
+        const iso = toISODate(d);
+        const checked = getChecked(iso, h.id);
+        const disabled = (h.active===false);
+
+        // NUEVO: Difuminado + COLOR SÓLIDO del hábito cuando está marcado
+        // Mantiene glow (neo-on) y además un sólido (solidBg)
+        const base = "ring-1 ring-white/10";
+        const onClasses = `neo-on ${c.solidBg} ring-1 ring-white/15 ${c.glow}`;
+        const offClasses = `bg-white/0 ${base}`;
+
+        rows.push(`
+          <div class="cell bg-white/0 border-b border-white/10 flex items-center justify-center px-2">
+            <button
+              class="group neo flex h-9 w-9 items-center justify-center rounded-xl transition
+                ${disabled ? "opacity-35 cursor-not-allowed" : "hover:bg-white/5"}
+                ${checked ? onClasses : offClasses}"
+              data-cell="${iso}__${h.id}"
+              ${disabled ? "disabled" : ""}>
+              <svg xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 transition ${checked ? c.icon : "text-transparent group-hover:text-slate-500"}"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+            </button>
+          </div>
+        `);
+      });
+    });
+
+    // Summary row (compacta)
+    const summaryRow = [];
+    summaryRow.push(`
+      <div class="sticky-first cell bg-white/5 border-b border-white/10 px-4 flex items-center">
+        <div>
+          <div class="text-sm font-semibold text-slate-100">Resumen</div>
+          <div class="text-xs text-slate-300">Checks · coste</div>
+        </div>
+      </div>
+    `);
+
+    p.dates.forEach((d) => {
+      const iso = toISODate(d);
+      const activeHabits = hs.filter(h => h.active!==false);
+      const done = activeHabits.reduce((acc,h)=> acc + (getChecked(iso,h.id)?1:0), 0);
+      const possible = activeHabits.length;
+      const pct = possible ? Math.round((done/possible)*100) : 0;
+
+      let costDay = 0;
+      for(const h of activeHabits){
+        costDay += priceFor(h, getChecked(iso,h.id));
+      }
+
+      summaryRow.push(`
+        <div class="cell bg-white/5 border-b border-white/10 flex flex-col items-center justify-center px-2 py-2">
+          <div class="text-xs font-semibold text-slate-200">${done}/${possible} · ${pct}%</div>
+          <div class="mt-1 text-xs font-semibold text-amber-200">${formatEUR(costDay)}</div>
+          <div class="mt-1 h-1.5 w-12 rounded-full bg-white/10 overflow-hidden">
+            <div class="h-full bg-cyan-400 rounded-full shadow-[0_0_14px_rgba(34,211,238,.55)]" style="width:${clamp(pct,0,100)}%"></div>
+          </div>
+        </div>
+      `);
+    });
+
+    const templateCols = `${nameColW}px repeat(${p.dates.length}, minmax(${minColW}px, 1fr))`;
+
+    gridWrap.innerHTML = `
+      <div class="grid-table" style="grid-template-columns:${templateCols}">
+        ${headerCells.join("")}
+        ${rows.join("")}
+        ${summaryRow.join("")}
+      </div>
+    `;
+
+    gridWrap.querySelectorAll("[data-cell]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const [iso, habitId] = btn.getAttribute("data-cell").split("__");
+        toggleChecked(iso, habitId);
+        renderAll(false);
+      });
+    });
+    gridWrap.querySelectorAll("[data-edit]").forEach(btn => {
+      btn.addEventListener("click", () => openModal(btn.getAttribute("data-edit")));
+    });
+  }
+
+  function streaksForHabit(habitId){
+    const today = startOfDay(new Date());
+    const daysBack = 365;
+
+    let current = 0;
+    for(let i=0;i<=daysBack;i++){
+      const d = addDays(today, -i);
+      const iso = toISODate(d);
+      const ok = getChecked(iso, habitId);
+      if(i===0) current = ok ? 1 : 0;
+      else if(ok && current===i) current += 1;
+      if(!ok && i>0 && current!==i+1) break;
+    }
+
+    let best = 0, run = 0;
+    for(let i=daysBack;i>=0;i--){
+      const d = addDays(today, -i);
+      const iso = toISODate(d);
+      if(getChecked(iso, habitId)){ run += 1; best = Math.max(best, run); }
+      else run = 0;
+    }
+    return { current, best };
+  }
+
+  function renderStats(){
+    const hs = filteredHabits();
+    const p = getPeriod();
+    const dateISOs = p.dates.map(toISODate);
+    const activeHabits = hs.filter(h => h.active!==false);
+
+    let checksCount = 0;
+    let possible = activeHabits.length * p.dates.length;
+    for(const iso of dateISOs){
+      for(const h of activeHabits){
+        if(getChecked(iso, h.id)) checksCount++;
+      }
+    }
+    const pct = possible ? Math.round((checksCount/possible)*100) : 0;
+
+    statsSubtitle.textContent = (p.type==="mes")
+      ? `Mes de ${new Date(p.start).toLocaleDateString("es-ES",{month:"long", year:"numeric"})}`
+      : `Semana: ${formatRangeES(p.start, p.end)}`;
+
+    statsPct.textContent = `${pct}%`;
+    statsBar.style.width = `${clamp(pct,0,100)}%`;
+    statsChecks.textContent = checksCount;
+    statsPossible.textContent = possible;
+
+    const byHabit = hs.map(h => {
+      let c = 0;
+      for(const iso of dateISOs) if(getChecked(iso,h.id)) c++;
+      const max = p.dates.length;
+      const pp = max ? Math.round((c/max)*100) : 0;
+      return { h, c, max, pp };
+    }).sort((a,b)=> b.c - a.c);
+
+    topHabits.innerHTML = byHabit.slice(0,5).map(({h,c,max,pp}) => {
+      const cm = colorMeta(h.color);
+      return `
+        <div class="flex items-center justify-between rounded-2xl bg-white/5 p-3 ring-1 ring-white/10">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="h-2.5 w-2.5 rounded-full ${cm.dot}"></span>
+              <div class="truncate text-sm font-semibold text-slate-100">${escapeHtml(h.name||"")}</div>
+            </div>
+            <div class="mt-1 text-xs text-slate-300">${c}/${max} días · ${sizeLabel(h.size)}${(h.size==="small" && h.penalty) ? " · Castigo" : ""}</div>
+          </div>
+          <div class="text-sm font-semibold text-cyan-200">${pp}%</div>
+        </div>
+      `;
+    }).join("");
+
+    habitCards.innerHTML = byHabit.map(({h,c,max,pp}) => {
+      const cm = colorMeta(h.color);
+      const st = streaksForHabit(h.id);
+      return `
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="h-2.5 w-2.5 rounded-full ${cm.dot}"></span>
+                <div class="truncate text-sm font-semibold text-slate-100">${escapeHtml(h.name||"")}</div>
+                <span class="inline-flex items-center rounded-xl px-2 py-1 text-xs font-semibold ring-1 ${cm.pill}">
+                  ${h.schedule==="daily" ? "Diario" : (h.schedule==="weekly" ? "Semanal" : "Mensual")}
+                </span>
+                <span class="inline-flex items-center rounded-xl px-2 py-1 text-xs font-semibold ring-1 bg-white/5 text-slate-200 ring-white/10">
+                  ${sizeLabel(h.size)}
+                </span>
+                ${(h.size==="small" && h.penalty) ? `<span class="inline-flex items-center rounded-xl px-2 py-1 text-xs font-semibold ring-1 bg-rose-500/10 text-rose-200 ring-rose-400/25">Castigo</span>` : ""}
+              </div>
+            </div>
+            <button class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/5" data-edit="${h.id}">
+              Editar
+            </button>
+          </div>
+
+          <div class="mt-3">
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-slate-300">Progreso periodo</span>
+              <span class="font-semibold text-slate-100">${c}/${max} · ${pp}%</span>
+            </div>
+            <div class="mt-2 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+              <div class="h-full bg-cyan-400 rounded-full shadow-[0_0_18px_rgba(34,211,238,.55)]" style="width:${clamp(pp,0,100)}%"></div>
+            </div>
+          </div>
+
+          <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+            <div class="rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
+              <div class="text-slate-300">Racha actual</div>
+              <div class="font-semibold text-slate-100">${st.current} días</div>
+            </div>
+            <div class="rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
+              <div class="text-slate-300">Mejor racha</div>
+              <div class="font-semibold text-slate-100">${st.best} días</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    habitCards.querySelectorAll("[data-edit]").forEach(btn => {
+      btn.addEventListener("click", () => openModal(btn.getAttribute("data-edit")));
+    });
+  }
+
+  function renderSavings(){
+    const hs = filteredHabits();
+    const p = getPeriod();
+    const dateISOs = p.dates.map(toISODate);
+    const activeHabits = hs.filter(h => h.active!==false);
+
+    saveSubtitle.textContent = (p.type==="mes")
+      ? `Mes: ${new Date(p.start).toLocaleDateString("es-ES",{month:"long", year:"numeric"})}`
+      : `Semana: ${formatRangeES(p.start, p.end)}`;
+
+    let total = 0, totalDone = 0, totalNot = 0;
+
+    const perHabit = activeHabits.map(h => {
+      let doneDays = 0, notDays = 0, cost = 0, costNot = 0, costDone = 0;
+      for(const iso of dateISOs){
+        const done = getChecked(iso, h.id);
+        const price = priceFor(h, done);
+        cost += price;
+        if(done){ doneDays++; costDone += price; }
+        else { notDays++; costNot += price; }
+      }
+      total += cost; totalDone += costDone; totalNot += costNot;
+      return { h, doneDays, notDays, cost, costDone, costNot };
+    }).sort((a,b)=> b.costNot - a.costNot);
+
+    saveTotal.textContent = formatEUR(total);
+    saveDone.textContent = formatEUR(totalDone);
+    saveNotDone.textContent = formatEUR(totalNot);
+
+    topPenalties.innerHTML = perHabit.slice(0,5).map(({h, costNot}) => {
+      const cm = colorMeta(h.color);
+      return `
+        <div class="flex items-center justify-between rounded-2xl bg-white/5 p-3 ring-1 ring-white/10">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="h-2.5 w-2.5 rounded-full ${cm.dot}"></span>
+              <div class="truncate text-sm font-semibold text-slate-100">${escapeHtml(h.name||"")}</div>
+            </div>
+            <div class="mt-1 text-xs text-slate-300">${sizeLabel(h.size)}${(h.size==="small" && h.penalty) ? " · Castigo" : ""}</div>
+          </div>
+          <div class="text-sm font-semibold text-rose-200">${formatEUR(costNot)}</div>
+        </div>
+      `;
+    }).join("");
+
+    saveHabitCards.innerHTML = perHabit.map(({h, doneDays, notDays, cost, costDone, costNot}) => {
+      const cm = colorMeta(h.color);
+      const doneUnit = (PRICES[h.size] || PRICES.medium).done;
+      const notUnit = (h.size==="small" && h.penalty) ? 1.00 : (PRICES[h.size] || PRICES.medium).not;
+      return `
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="h-2.5 w-2.5 rounded-full ${cm.dot}"></span>
+                <div class="truncate text-sm font-semibold text-slate-100">${escapeHtml(h.name||"")}</div>
+                <span class="inline-flex items-center rounded-xl px-2 py-1 text-xs font-semibold ring-1 bg-white/5 text-slate-200 ring-white/10">${sizeLabel(h.size)}</span>
+                ${(h.size==="small" && h.penalty) ? `<span class="inline-flex items-center rounded-xl px-2 py-1 text-xs font-semibold ring-1 bg-rose-500/10 text-rose-200 ring-rose-400/25">Castigo</span>` : ""}
+              </div>
+              <div class="mt-1 text-xs text-slate-300">
+                Precio: cumple <span class="font-semibold text-emerald-200">${formatEUR(doneUnit)}</span> · no cumple <span class="font-semibold text-rose-200">${formatEUR(notUnit)}</span>
+              </div>
+            </div>
+            <button class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/5" data-edit="${h.id}">
+              Editar
+            </button>
+          </div>
+
+          <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div class="rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
+              <div class="text-slate-300">Cumplidos</div>
+              <div class="font-semibold text-emerald-200">${doneDays} · ${formatEUR(costDone)}</div>
+            </div>
+            <div class="rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
+              <div class="text-slate-300">No cumplidos</div>
+              <div class="font-semibold text-rose-200">${notDays} · ${formatEUR(costNot)}</div>
+            </div>
+            <div class="rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
+              <div class="text-slate-300">Total</div>
+              <div class="font-semibold text-amber-200">${formatEUR(cost)}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    saveHabitCards.querySelectorAll("[data-edit]").forEach(btn => {
+      btn.addEventListener("click", () => openModal(btn.getAttribute("data-edit")));
+    });
+  }
+
+  // Modal
+  function openModal(id=null){
+    editingId = id;
+    const isEdit = !!id;
+    modalTitle.textContent = isEdit ? "Editar hábito" : "Añadir hábito";
+    btnDeleteHabit.classList.toggle("hidden", !isEdit);
+
+    const h = isEdit ? state.habits.find(x=>x.id===id) : null;
+    habitName.value = h ? (h.name||"") : "";
+    habitSchedule.value = h ? (h.schedule||"daily") : "daily";
+    habitColor.value = h ? (h.color||"cyan") : "cyan";
+    habitSize.value = h ? (h.size||"medium") : "medium";
+    habitPenalty.checked = h ? !!h.penalty : false;
+    targetWeek.value = h ? (h.targetPerWeek ?? 3) : 3;
+    targetMonth.value = h ? (h.targetPerMonth ?? 8) : 8;
+    habitActive.checked = h ? (h.active!==false) : true;
+
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    setTimeout(()=>habitName.focus(), 50);
+  }
+
+  function closeModal(){
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+    editingId = null;
+  }
+
+  function saveHabitFromModal(){
+    const name = habitName.value.trim();
+    if(!name){ showToast("Pon un nombre"); habitName.focus(); return; }
+
+    const schedule = habitSchedule.value;
+    const color = habitColor.value;
+    const size = habitSize.value;
+    const active = habitActive.checked;
+    const penalty = (size==="small") ? habitPenalty.checked : false;
+    const tw = parseInt(targetWeek.value||"0",10);
+    const tm = parseInt(targetMonth.value||"0",10);
+
+    if(editingId){
+      const h = state.habits.find(x=>x.id===editingId);
+      if(!h) return;
+      h.name = name; h.schedule = schedule; h.color = color; h.size = size;
+      h.penalty = penalty; h.active = active;
+      h.targetPerWeek = isFinite(tw) ? tw : 0;
+      h.targetPerMonth = isFinite(tm) ? tm : 0;
+    } else {
+      state.habits.push({
+        id:"h_"+uid(), name, schedule, color, size, penalty, active,
+        targetPerWeek: isFinite(tw) ? tw : 0,
+        targetPerMonth: isFinite(tm) ? tm : 0
+      });
+    }
+    save();
+    closeModal();
+    renderAll();
+    showToast("Guardado");
+  }
+
+  function deleteHabit(){
+    if(!editingId) return;
+    const h = state.habits.find(x=>x.id===editingId);
+    if(!h) return;
+    const ok = confirm(`¿Borrar el hábito "${h.name}"?\n(No borraremos checks antiguos, pero ya no aparecerá.)`);
+    if(!ok) return;
+    state.habits = state.habits.filter(x=>x.id!==editingId);
+    save();
+    closeModal();
+    renderAll();
+    showToast("Borrado");
+  }
+
+  function exportJSON(){
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "habitos_export.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast("Exportado");
+  }
+
+  function importJSON(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const parsed = JSON.parse(reader.result);
+        if(!parsed || typeof parsed!=="object") throw new Error();
+        if(!Array.isArray(parsed.habits) || typeof parsed.checks!=="object") throw new Error();
+
+        state = {
+          habits: parsed.habits.map(h => ({
+            id: h.id || ("h_"+uid()),
+            name: h.name || "",
+            color: h.color || "cyan",
+            schedule: h.schedule || "daily",
+            size: h.size || "medium",
+            penalty: !!h.penalty,
+            targetPerWeek: h.targetPerWeek ?? 3,
+            targetPerMonth: h.targetPerMonth ?? 8,
+            active: h.active !== false
+          })),
+          checks: parsed.checks || {},
+          ui: { ...DEFAULT.ui, ...(parsed.ui||{}) }
+        };
+
+        save();
+        anchorDate = state.ui.anchorISO ? startOfDay(new Date(state.ui.anchorISO)) : startOfDay(new Date());
+        renderAll();
+        showToast("Importado");
+      } catch {
+        alert("No se pudo importar. Archivo inválido.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function resetAll(){
+    const ok = confirm("¿Reset total?\nSe borrarán hábitos y checks en este navegador.");
+    if(!ok) return;
+    localStorage.removeItem(STORAGE_KEY);
+    state = structuredClone(DEFAULT);
+    anchorDate = startOfDay(new Date());
+    save();
+    renderAll();
+    showToast("Reset");
+  }
+
+  function markTodayAll(val){
+    const iso = toISODate(new Date());
+    const hs = filteredHabits().filter(h => h.active!==false);
+    if(hs.length===0) return;
+    for(const h of hs){
+      const day = state.checks[iso] ? { ...state.checks[iso] } : {};
+      day[h.id] = !!val;
+      state.checks[iso] = day;
+    }
+    save();
+    renderAll(false);
+    showToast(val ? "Marcado" : "Limpio");
+  }
+
+  function setTab(tab){
+    state.ui.tab = tab; save();
+
+    panelTabla.classList.toggle("hidden", tab!=="tabla");
+    panelStats.classList.toggle("hidden", tab!=="estadisticas");
+    panelSavings.classList.toggle("hidden", tab!=="ahorro");
+
+    if(tab==="estadisticas") renderStats();
+    if(tab==="ahorro") renderSavings();
+    if(tab==="tabla") renderGrid();
+
+    document.querySelectorAll(".tabBtn").forEach(b=>{
+      const active = b.dataset.tab === tab;
+      b.className = "tabBtn flex-1 sm:flex-none rounded-xl px-3 py-2 text-sm font-semibold " +
+        (active ? "bg-white/10 text-slate-100 ring-1 ring-white/10 shadow" : "text-slate-300 hover:text-white");
+    });
+  }
+
+  function setView(view){
+    state.ui.view = view; save();
+    document.querySelectorAll(".viewBtn").forEach(b=>{
+      const active = b.dataset.view === view;
+      b.className = "viewBtn flex-1 sm:flex-none rounded-xl px-3 py-2 text-sm font-semibold " +
+        (active ? "bg-white/10 text-slate-100 ring-1 ring-white/10 shadow" : "text-slate-300 hover:text-white");
+    });
+    renderAll();
+  }
+
+  function renderAll(){
+    state.ui.anchorISO = toISODate(anchorDate);
+    save();
+
+    renderHabitList();
+    renderRangeLabel();
+
+    if(state.ui.tab==="estadisticas") renderStats();
+    else if(state.ui.tab==="ahorro") renderSavings();
+    else renderGrid();
+
+    searchInput.value = state.ui.query || "";
+    onlyActiveToggle.checked = !!state.ui.onlyActive;
+  }
+
+  // Events
+  $("btnAddHabit").addEventListener("click", ()=>openModal(null));
+  $("btnExport").addEventListener("click", exportJSON);
+  $("btnImport").addEventListener("click", ()=>$("fileInput").click());
+  $("fileInput").addEventListener("change", (e)=>{
+    const f = e.target.files && e.target.files[0];
+    if(f) importJSON(f);
+    e.target.value = "";
+  });
+  $("btnReset").addEventListener("click", resetAll);
+
+  $("btnQuickFill").addEventListener("click", ()=>markTodayAll(true));
+  $("btnQuickClear").addEventListener("click", ()=>markTodayAll(false));
+
+  $("btnPrev").addEventListener("click", ()=>{
+    const p = getPeriod();
+    anchorDate = (p.type==="mes") ? addDays(monthStart(anchorDate), -1) : addDays(anchorDate, -7);
+    renderAll();
+  });
+  $("btnNext").addEventListener("click", ()=>{
+    const p = getPeriod();
+    anchorDate = (p.type==="mes") ? addDays(addDays(monthStart(anchorDate), getDaysInMonth(anchorDate)), 1) : addDays(anchorDate, 7);
+    renderAll();
+  });
+  $("btnToday").addEventListener("click", ()=>{ anchorDate = startOfDay(new Date()); renderAll(); });
+
+  searchInput.addEventListener("input", ()=>{ state.ui.query = searchInput.value; save(); renderAll(); });
+  onlyActiveToggle.addEventListener("change", ()=>{ state.ui.onlyActive = onlyActiveToggle.checked; save(); renderAll(); });
+
+  document.querySelectorAll(".tabBtn").forEach(btn => btn.addEventListener("click", ()=>setTab(btn.dataset.tab)));
+  document.querySelectorAll(".viewBtn").forEach(btn => btn.addEventListener("click", ()=>setView(btn.dataset.view)));
+
+  $("modalClose").addEventListener("click", closeModal);
+  $("btnCancel").addEventListener("click", closeModal);
+  modalBackdrop.addEventListener("click", closeModal);
+  $("btnSaveHabit").addEventListener("click", saveHabitFromModal);
+  btnDeleteHabit.addEventListener("click", deleteHabit);
+
+  document.addEventListener("keydown", (e)=>{
+    if(e.key==="Escape" && !modal.classList.contains("hidden")) closeModal();
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="s" && !modal.classList.contains("hidden")){
+      e.preventDefault();
+      saveHabitFromModal();
+    }
+  });
+
+  // Re-render al rotar móvil / cambiar tamaño
+  window.addEventListener("resize", () => {
+    // Solo re-render si estás en tabla, para no “lag”
+    if(state.ui.tab==="tabla") renderGrid();
+  });
+
+  // Init
+  setView(state.ui.view || "semana");
+  setTab(state.ui.tab || "tabla");
+  renderAll();
+})();
+</script>
+</body>
+</html>
